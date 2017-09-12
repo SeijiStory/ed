@@ -16,38 +16,42 @@
  *      along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stdio.h> /* For file operations */
+/* HEADERS */
+#include <stdio.h> /* for file operations */
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h> /* For getopt() */
+#include <unistd.h> /* for getopt() */
+#include "commands.h" /* list of ed commands */
 
+/* PROGRAM CONSTANTS */
+#define VERSION "0.1a" /* program version */
+#define OPTIONS "hVlp:sv" /* valid launch arguments */
+#define CMDBUFLEN 256 /* max length of command; based off of z/OS UNIX System 
+                       * Services Command Reference */
+
+/* PROGRAM FLAGS */
+volatile char loose = 0; /* always return zero? */
+volatile char silent = 0; /* suppress messages? */
+volatile char verbose = 0; /* verbose enabled? */
+
+/* STATE VARIABLES */
+char running = 1; /* program currently running? */
+size_t address = 0; /* current line address to work with */
+char *defaultfname = NULL; /* the default file name */
+char *prompt = NULL; /* prompt message */
+int exitcode = 0;
+
+/* BUFFERS */
+char *yankbuf = NULL; /* yank buffer */
+char *filebuf; /* store open file */
+char commandbuf[CMDBUFLEN];
+
+/* FUNCTIONS */
 
 int main(int argc, char **argv)
 {
-        /* PROGRAM CONSTANTS */
-        const char *VERSION = "0.1a"; /* program version */
-        const char *options = "hVlp:sv"; /* valid program options */
-
-        /* PROGRAM VARIABLES */
-
-        /* Flags */
-        volatile char loose = 0; /* always return zero? */
-        char *prompt = NULL; /* prompt message */
-        volatile char silent = 0; /* suppress messages? */
-        volatile char verbose = 0; /* verbose enabled? */
-
-        /* Running Variables */
-        size_t address = 0; /* current line address to work with */
-        char *defaultfname = NULL; /* the default file name */
-        char *yankbuf = NULL; /* yank buffer */
-
-        /* FILE VARIABLES */
-        const char open = 0; /* file currently open? */
-        char *filebuf; /* store open file */
         int opt; /* getting arguments */
-
-
-        while ((opt = getopt(argc, argv, options)) > -1) {
+        while ((opt = getopt(argc, argv, OPTIONS)) > -1) {
                 size_t n;
                 switch (opt) {
                 case 'h':
@@ -77,15 +81,19 @@ int main(int argc, char **argv)
                                 "file\n"
                                 "\t3 for an internal consistency error (eg: "
                                 "bug) which caused ed to panic.\n" );
+                        exitcode = 0;
+                        goto exit;
                         break;
                 case 'V':
-                        printf( "ed %s\n"
+                        printf( "ed " VERSION "\n"
                                 "Copyright (C) 2017 Seiji Story.\nLicense "
                                 "GPLv3+: GNU GPL version 3 or later "
                                 "<http://gnu.org/licenses/gpl.html>\nThis is "
                                 "free software: you are free to change and "
                                 "redistribute it.\nThere is NO WARRANTY, to "
-                                "the extent permitted by law.\n", VERSION );
+                                "the extent permitted by law.\n" );
+                        exitcode = 0;
+                        goto exit;
                         break;
                 case 'l':
                         loose = 1;
@@ -104,7 +112,28 @@ int main(int argc, char **argv)
                 default:
                         printf( "ed: invalid option -- \'%c\'\n"
                                 "Try \'ed -h\' for more information.\n" );
-                        exit(1);
-                }
+                        exitcode = 1;
+                        goto exit;
+                } /* TODO: add -r and -G flag support */
         }
+        while (running) {
+                if (!prompt) { /* prompt not set */
+                        prompt = malloc(1);
+                        prompt = "";
+                }
+                printf(prompt);
+                fgets(commandbuf, CMDBUFLEN, stdin);
+                ed_parse(commandbuf);
+        }
+exit:
+        /* Clean up */
+        free(defaultfname);
+        defaultfname = NULL;
+        free(prompt);
+        prompt = NULL;
+        free(yankbuf);
+        yankbuf = NULL;
+        free(filebuf);
+        filebuf = NULL;
+        return exitcode;
 }
