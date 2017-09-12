@@ -1,4 +1,3 @@
-
 /**     main.c: This file contains the user interface for the editor
  *      Copyright (C) 2017  Seiji Story
  *
@@ -21,7 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h> /* for getopt() */
-#include "commands.h" /* list of ed commands */
+#include "parse.h" /* list of ed commands */
 
 /* PROGRAM CONSTANTS */
 #define VERSION "0.1a" /* program version */
