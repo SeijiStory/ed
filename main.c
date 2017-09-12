@@ -17,16 +17,38 @@
  */
 
 #include <stdio.h> /* For file operations */
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h> /* For getopt() */
+
 
 int main(int argc, char **argv)
 {
-        const char *VERSION = "0.1a";
-        const char open = 0;
-        const char *options = "hVlpsv";
-        char *filebuf;
-        int opt; /* Getting arguments */
+        /* PROGRAM CONSTANTS */
+        const char *VERSION = "0.1a"; /* program version */
+        const char *options = "hVlp:sv"; /* valid program options */
+
+        /* PROGRAM VARIABLES */
+
+        /* Flags */
+        volatile char loose = 0; /* always return zero? */
+        char *prompt = NULL; /* prompt message */
+        volatile char silent = 0; /* suppress messages? */
+        volatile char verbose = 0; /* verbose enabled? */
+
+        /* Running Variables */
+        size_t address = 0; /* current line address to work with */
+        char *defaultfname = NULL; /* the default file name */
+        char *yankbuf = NULL; /* yank buffer */
+
+        /* FILE VARIABLES */
+        const char open = 0; /* file currently open? */
+        char *filebuf; /* store open file */
+        int opt; /* getting arguments */
+
+
         while ((opt = getopt(argc, argv, options)) > -1) {
+                size_t n;
                 switch (opt) {
                 case 'h':
                         printf( "Ed - The line editor.\n\n"
@@ -37,7 +59,7 @@ int main(int argc, char **argv)
                                 "exit\n"
                                 "\t-l\t\t\texit with 0 status even if a "
                                 "command fails\n"
-                                "\t-p[STR]\t\t\tuse STR as an interactive "
+                                "\t-p [STR]\t\t\tuse STR as an interactive "
                                 "prompt\n"
                                 "\t-s\t\t\tsuppress diagnostics, byte counts, "
                                 "and \'!\' prompt\n"
@@ -66,15 +88,23 @@ int main(int argc, char **argv)
                                 "the extent permitted by law.\n", VERSION );
                         break;
                 case 'l':
+                        loose = 1;
                         break;
                 case 'p':
+                        n = strlen(optarg) + 1;
+                        prompt = malloc(n);
+                        strncpy(prompt, optarg, n);
                         break;
                 case 's':
+                        silent = 1;
                         break;
                 case 'v':
+                        verbose = 1;
                         break;
                 default:
-                        break;
+                        printf( "ed: invalid option -- \'%c\'\n"
+                                "Try \'ed -h\' for more information.\n" );
+                        exit(1);
                 }
         }
 }
